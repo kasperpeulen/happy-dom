@@ -55,6 +55,12 @@ describe('HTMLOutputElement', () => {
 			expect(element.textContent).toBe('Value');
 			expect(element.defaultValue).toBe('Default');
 		});
+
+		it('Converts the default value to a string.', () => {
+			element.value = 'Value';
+			element.defaultValue = <string>(<unknown>null);
+			expect(element.defaultValue).toBe('null');
+		});
 	});
 
 	describe('get form()', () => {

@@ -33,6 +33,7 @@ export default class HTMLOutputElement extends HTMLElement {
 	 * @param defaultValue Default value.
 	 */
 	public set defaultValue(defaultValue: string) {
+		defaultValue = String(defaultValue);
 		if (this[PropertySymbol.defaultValue] === null) {
 			this.textContent = defaultValue;
 			return;
