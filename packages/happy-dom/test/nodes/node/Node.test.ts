@@ -682,6 +682,74 @@ describe('Node', () => {
 			expect(span.ownerDocument === document).toBe(true);
 		});
 
+		it('Sets ownerDocument on the descendants of the child node.', () => {
+			const parent = document.createElement('div');
+			const domParser = new window.DOMParser();
+			const newDocument = domParser.parseFromString(
+				'<section><p><span>Text</span></p></section>',
+				'text/html'
+			);
+			const section = <Node>newDocument.querySelector('section');
+			const span = <Node>newDocument.querySelector('span');
+
+			parent.appendChild(section);
+
+			expect(span.ownerDocument === document).toBe(true);
+			expect(span.firstChild!.ownerDocument === document).toBe(true);
+		});
+
+		it('Connects the descendants of a child node that was appended to a detached node before.', () => {
+			const outer = document.createElement('div');
+			const inner = document.createElement('div');
+			const span = document.createElement('span');
+			const text = document.createTextNode('Text');
+
+			span.appendChild(text);
+			inner.appendChild(span);
+			outer.appendChild(inner);
+
+			expect(text.isConnected).toBe(false);
+
+			document.body.appendChild(outer);
+
+			expect(span.isConnected).toBe(true);
+			expect(text.isConnected).toBe(true);
+		});
+
+		it('Sets the form of the descendants of a child node that is moved from one form to another.', () => {
+			const form1 = document.createElement('form');
+			const form2 = document.createElement('form');
+			const div = document.createElement('div');
+			const span = document.createElement('span');
+			const input = document.createElement('input');
+
+			span.appendChild(input);
+			div.appendChild(span);
+
+			expect(input.form).toBe(null);
+
+			form1.appendChild(div);
+
+			expect(input.form).toBe(form1);
+
+			form2.appendChild(div);
+
+			expect(input.form).toBe(form2);
+		});
+
+		it('Sets the form of the descendants of a deep clone when the clone is appended to a node.', () => {
+			const form = document.createElement('form');
+			form.innerHTML = '<div><span><input></span></div><select><option>A</option></select>';
+
+			const clone = <HTMLElement>form.cloneNode(true);
+			const parent = document.createElement('div');
+
+			parent.appendChild(clone);
+
+			expect(clone.querySelector('input')!['form']).toBe(clone);
+			expect(clone.querySelector('option')!['form']).toBe(clone);
+		});
+
 		it('Handles modifying nodes in connectedCallback() when appending to a parent node.', () => {
 			/**
 			 *

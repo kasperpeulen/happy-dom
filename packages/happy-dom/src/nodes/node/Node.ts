@@ -82,6 +82,7 @@ export default class Node extends EventTarget {
 	public declare [PropertySymbol.elementArray]: Element[];
 	public declare [PropertySymbol.childNodes]: NodeList<Node> | null;
 	public declare [PropertySymbol.assignedToSlot]: HTMLSlotElement | null;
+	public declare [PropertySymbol.hasUnconnectedChildNodes]: boolean;
 	public declare [PropertySymbol.cache]: {
 		querySelector: Map<string, ICachedQuerySelectorResult>;
 		querySelectorAll: Map<string, ICachedQuerySelectorAllResult>;
@@ -126,6 +127,7 @@ export default class Node extends EventTarget {
 		this[PropertySymbol.elementArray] = [];
 		this[PropertySymbol.childNodes] = null;
 		this[PropertySymbol.assignedToSlot] = null;
+		this[PropertySymbol.hasUnconnectedChildNodes] = false;
 		this[PropertySymbol.cache] = {
 			querySelector: new Map(),
 			querySelectorAll: new Map(),
@@ -494,6 +496,9 @@ export default class Node extends EventTarget {
 					clone[PropertySymbol.elementArray].push(<Element>childClone);
 				}
 			}
+
+			// The child nodes are added without connectedToNode(), so they inherit from the clone when it is connected to a node.
+			clone[PropertySymbol.hasUnconnectedChildNodes] = clone[PropertySymbol.nodeArray].length > 0;
 		}
 
 		return clone;
@@ -975,49 +980,88 @@ export default class Node extends EventTarget {
 			isDisconnected = true;
 		}
 
-		this[PropertySymbol.ownerDocument] = parent[PropertySymbol.ownerDocument] || <Document>parent;
-		this[PropertySymbol.window] =
-			parent[PropertySymbol.window] || parent[PropertySymbol.defaultView];
+		const ownerDocument = parent[PropertySymbol.ownerDocument] || <Document>parent;
+		const window = parent[PropertySymbol.window] || parent[PropertySymbol.defaultView];
+
+		// The child nodes inherit what this node inherits from its parent, so they only have to be
+		// walked when any of it changes (or when they were added without connectedToNode()).
+		let hasChanged =
+			isConnected ||
+			isDisconnected ||
+			this[PropertySymbol.hasUnconnectedChildNodes] ||
+			this[PropertySymbol.ownerDocument] !== ownerDocument ||
+			this[PropertySymbol.window] !== window;
+
+		this[PropertySymbol.ownerDocument] = ownerDocument;
+		this[PropertySymbol.window] = window;
 
 		if (parentNode) {
-			if (this[PropertySymbol.nodeType] !== NodeTypeEnum.documentFragmentNode) {
+			if (
+				this[PropertySymbol.nodeType] !== NodeTypeEnum.documentFragmentNode &&
+				this[PropertySymbol.rootNode] !== parentNode[PropertySymbol.rootNode]
+			) {
 				this[PropertySymbol.rootNode] = parentNode[PropertySymbol.rootNode];
+				hasChanged = true;
 			}
 
 			const tagName = (<any>this)[PropertySymbol.tagName];
 
-			if (parentNode[PropertySymbol.styleNode] && tagName !== 'STYLE') {
+			if (
+				parentNode[PropertySymbol.styleNode] &&
+				tagName !== 'STYLE' &&
+				this[PropertySymbol.styleNode] !== parentNode[PropertySymbol.styleNode]
+			) {
 				this[PropertySymbol.styleNode] = parentNode[PropertySymbol.styleNode];
+				hasChanged = true;
 			}
 
-			if (parentNode[PropertySymbol.textAreaNode] && tagName !== 'TEXTAREA') {
+			if (
+				parentNode[PropertySymbol.textAreaNode] &&
+				tagName !== 'TEXTAREA' &&
+				this[PropertySymbol.textAreaNode] !== parentNode[PropertySymbol.textAreaNode]
+			) {
 				this[PropertySymbol.textAreaNode] = parentNode[PropertySymbol.textAreaNode];
+				hasChanged = true;
 			}
 
-			if (parentNode[PropertySymbol.formNode] && tagName !== 'FORM') {
+			if (
+				parentNode[PropertySymbol.formNode] &&
+				tagName !== 'FORM' &&
+				this[PropertySymbol.formNode] !== parentNode[PropertySymbol.formNode]
+			) {
 				this[PropertySymbol.formNode] = parentNode[PropertySymbol.formNode];
+				hasChanged = true;
 			}
 
-			if (parentNode[PropertySymbol.selectNode] && tagName !== 'SELECT') {
+			if (
+				parentNode[PropertySymbol.selectNode] &&
+				tagName !== 'SELECT' &&
+				this[PropertySymbol.selectNode] !== parentNode[PropertySymbol.selectNode]
+			) {
 				this[PropertySymbol.selectNode] = parentNode[PropertySymbol.selectNode];
+				hasChanged = true;
 			}
 		}
 
-		// HTMLFormElement and HTMLSelectElement return a Proxy from their constructor.
-		// The proxy is the identity handed out by the public API, so it has to be stored
-		// as the parent of the child nodes, the same way as in appendChild() and insertBefore().
-		const self = this[PropertySymbol.proxy] || this;
+		if (hasChanged) {
+			this[PropertySymbol.hasUnconnectedChildNodes] = false;
 
-		const childNodes = this[PropertySymbol.nodeArray].slice();
-		for (let i = 0, max = childNodes.length; i < max; i++) {
-			childNodes[i][PropertySymbol.parentNode] = self;
-			childNodes[i][PropertySymbol.connectedToNode]();
-		}
+			// HTMLFormElement and HTMLSelectElement return a Proxy from their constructor.
+			// The proxy is the identity handed out by the public API, so it has to be stored
+			// as the parent of the child nodes, the same way as in appendChild() and insertBefore().
+			const self = this[PropertySymbol.proxy] || this;
 
-		// eslint-disable-next-line
-		if ((<any>this)[PropertySymbol.shadowRoot]) {
+			const childNodes = this[PropertySymbol.nodeArray].slice();
+			for (let i = 0, max = childNodes.length; i < max; i++) {
+				childNodes[i][PropertySymbol.parentNode] = self;
+				childNodes[i][PropertySymbol.connectedToNode]();
+			}
+
 			// eslint-disable-next-line
-			(<any>this)[PropertySymbol.shadowRoot][PropertySymbol.connectedToNode]();
+			if ((<any>this)[PropertySymbol.shadowRoot]) {
+				// eslint-disable-next-line
+				(<any>this)[PropertySymbol.shadowRoot][PropertySymbol.connectedToNode]();
+			}
 		}
 
 		if (isConnected) {
