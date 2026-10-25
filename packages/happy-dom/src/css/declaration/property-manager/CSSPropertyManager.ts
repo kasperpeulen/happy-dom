@@ -530,8 +530,15 @@ export default class CSSPropertyManager {
 	public clone(): CSSPropertyManager {
 		const _class = <typeof CSSPropertyManager>this.constructor;
 		const clone: CSSPropertyManager = new _class();
+		const properties: ICSSPropertyMap = {};
 
-		clone.properties = structuredClone(this.properties);
+		// Each property is copied, as the computed style converts the value of a property in place.
+		for (const name of Object.keys(this.properties)) {
+			const property = this.properties[name];
+			properties[name] = { value: property.value, important: property.important };
+		}
+
+		clone.properties = properties;
 		clone.definedPropertyNames = Object.assign({}, this.definedPropertyNames);
 
 		return clone;
