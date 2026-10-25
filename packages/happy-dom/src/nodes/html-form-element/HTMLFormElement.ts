@@ -445,9 +445,8 @@ export default class HTMLFormElement extends HTMLElement {
 					(<HTMLInputElement>element)[PropertySymbol.checked] = null;
 					break;
 				case 'OUTPUT':
-					(<HTMLOutputElement>element).textContent = (<HTMLOutputElement>element)[
-						PropertySymbol.defaultValue
-					];
+					(<HTMLOutputElement>element).textContent = (<HTMLOutputElement>element).defaultValue;
+					(<HTMLOutputElement>element)[PropertySymbol.defaultValue] = null;
 					break;
 				case 'SELECT':
 					let hasSelectedAttribute = false;

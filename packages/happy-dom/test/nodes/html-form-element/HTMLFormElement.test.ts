@@ -1307,6 +1307,33 @@ describe('HTMLFormElement', () => {
 			expect((<HTMLOutputElement>root.children[9]).value).toBe('Default value');
 			expect((<HTMLOutputElement>root.children[9]).textContent).toBe('Default value');
 		});
+
+		it('Leaves the text content of an output element whose default value has not been set.', () => {
+			element.innerHTML = '<output>Saved</output>';
+			document.body.appendChild(element);
+
+			const output = <HTMLOutputElement>element.children[0];
+
+			element.reset();
+
+			expect(output.textContent).toBe('Saved');
+		});
+
+		it('Restores the text content of an output element from before its value was set.', () => {
+			element.innerHTML = '<output>Text</output>';
+			document.body.appendChild(element);
+
+			const output = <HTMLOutputElement>element.children[0];
+			output.value = 'Value';
+
+			element.reset();
+
+			expect(output.textContent).toBe('Text');
+			expect(output.defaultValue).toBe('Text');
+
+			output.textContent = 'Other text';
+			expect(output.defaultValue).toBe('Other text');
+		});
 	});
 
 	describe('appendChild()', () => {

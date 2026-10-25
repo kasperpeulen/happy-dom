@@ -27,12 +27,39 @@ describe('HTMLOutputElement', () => {
 			element.defaultValue = 'Test';
 			expect(element.defaultValue).toBe('Test');
 		});
+
+		it('Returns the text content until the default value is set.', () => {
+			element.textContent = 'Text';
+			expect(element.defaultValue).toBe('Text');
+			element.textContent = 'Other text';
+			expect(element.defaultValue).toBe('Other text');
+		});
 	});
 
 	describe('set defaultValue()', () => {
 		it('Returns default value.', () => {
 			element.defaultValue = 'Test';
 			expect(element.defaultValue).toBe('Test');
+		});
+
+		it('Sets the text content while the value has not been set.', () => {
+			element.textContent = 'Text';
+			element.defaultValue = 'Default';
+			expect(element.textContent).toBe('Default');
+			expect(element.defaultValue).toBe('Default');
+		});
+
+		it('Keeps the text content once the value has been set.', () => {
+			element.value = 'Value';
+			element.defaultValue = 'Default';
+			expect(element.textContent).toBe('Value');
+			expect(element.defaultValue).toBe('Default');
+		});
+
+		it('Converts the default value to a string.', () => {
+			element.value = 'Value';
+			element.defaultValue = <string>(<unknown>null);
+			expect(element.defaultValue).toBe('null');
 		});
 	});
 
@@ -154,6 +181,12 @@ describe('HTMLOutputElement', () => {
 		it('Sets the text content.', () => {
 			element.value = 'test';
 			expect(element.textContent).toBe('test');
+		});
+
+		it('Keeps the previous text content as the default value.', () => {
+			element.textContent = 'Text';
+			element.value = 'Value';
+			expect(element.defaultValue).toBe('Text');
 		});
 	});
 
