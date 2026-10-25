@@ -56,6 +56,16 @@ export default class CSSComputedStyle {
 	 * @returns Style sheets.
 	 */
 	public getComputedStyle(): CSSPropertyManager {
+		if (!this.element[PropertySymbol.isConnected]) {
+			return new CSSPropertyManager();
+		}
+
+		const cacheResult = this.getCachedPropertyManager(this.element);
+
+		if (cacheResult) {
+			return cacheResult;
+		}
+
 		const documentElements: Array<IStyleAndElement> = [];
 		const allDocumentElements: Array<IStyleAndElement> = [];
 		const parentElements: Array<IStyleAndElement> = [];
@@ -67,16 +77,6 @@ export default class CSSComputedStyle {
 		const processedCustomElements: Array<IStyleAndElement> = [];
 		let shadowRootElements: Array<IStyleAndElement> = [];
 		let allShadowRootElements: Array<IStyleAndElement> = [];
-
-		if (!this.element[PropertySymbol.isConnected]) {
-			return new CSSPropertyManager();
-		}
-
-		const cacheResult = this.getCachedPropertyManager(this.element);
-
-		if (cacheResult) {
-			return cacheResult;
-		}
 
 		const settings = new WindowBrowserContext(this.element[PropertySymbol.window]).getSettings();
 
